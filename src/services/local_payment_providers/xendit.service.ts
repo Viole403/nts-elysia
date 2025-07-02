@@ -1,4 +1,4 @@
-import Xendit from 'xendit-node';
+import { Xendit } from 'xendit-node';
 
 export class XenditService {
   private xenditClient: any;
@@ -7,7 +7,7 @@ export class XenditService {
     // Initialize Xendit client with your API Key
     // Replace with your actual Xendit configuration
     this.xenditClient = new Xendit({
-      secretKey: process.env.XENDIT_SECRET_KEY || 'YOUR_XENDIT_SECRET_KEY',
+      secretKey: process.env.XENDIT_SECRET_KEY || 'XENDIT_SECRET_KEY',
     });
   }
 
