@@ -3,7 +3,7 @@ import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { jwt } from '@elysiajs/jwt';
 import { bearer } from '@elysiajs/bearer';
-import { oauth2Plugin } from './plugins/oauth2';
+import { oauth2Plugin } from './plugins/oauth2.plugin';
 import { authModule } from './modules/auth';
 import { articlesModule } from './modules/articles';
 import { commentsModule } from './modules/comments';
