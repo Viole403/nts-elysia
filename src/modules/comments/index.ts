@@ -93,7 +93,7 @@ export class CommentController {
     subscriber.subscribe(channel, (err, count) => {
       if (err) {
         console.error('Failed to subscribe:', err.message);
-        // ctx.end(); // ctx.end is not a function on Elysia Context in this scenario
+        // ctx.end is not a function on Elysia Context in this scenario
         return;
       }
       console.log(`Subscribed to ${count} channel(s). Listening for messages on ${channel}`);
@@ -149,23 +149,26 @@ export const commentsModule = new Elysia()
   .use(authPlugin)
   .group('/comments', (app) =>
     app
+      // Routes for entity-based operations (creating and listing comments for entities)
       .post('/:entityType/:entityId', CommentController.create, {
         body: createCommentSchema,
         beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
       })
       .get('/:entityType/:entityId', CommentController.findAll, { query: getCommentsQuerySchema })
-      .get('/:id', CommentController.findOne)
-      .put('/:id', CommentController.update, {
+      .get('/:entityType/:entityId/stream', CommentController.streamComments)
+
+      // Routes for individual comment operations (using comment ID)
+      .get('/comment/:id', CommentController.findOne)
+      .put('/comment/:id', CommentController.update, {
         body: updateCommentSchema,
         beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
       })
-      .delete('/:id', CommentController.delete, {
+      .delete('/comment/:id', CommentController.delete, {
         beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
       })
-      .post('/:id/vote', CommentController.vote, {
+      .post('/comment/:id/vote', CommentController.vote, {
         body: commentVoteSchema,
         beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
       })
-      .get('/:entityType/:entityId/stream', CommentController.streamComments)
-      .get('/:id/votes/stream', CommentController.streamCommentVotes)
+      .get('/comment/:id/votes/stream', CommentController.streamCommentVotes)
   );
