@@ -1,0 +1,578 @@
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String             @id @default(cuid())
+  username           String?            @unique
+  email              String             @unique
+  password           String
+  role               UserRole           @default(USER)
+  provider           AuthProvider       @default(EMAIL)
+  providerId         String?            @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  lastLoginAt        DateTime?
+  sessions           AuthSession[]
+  profile            UserProfile?       
+  articles           Article[]
+  memberships        GroupMembership[]
+  posts              GroupPost[]
+  jobListings        JobListing[]
+  courses            Course[]
+  events             Event[]
+  shopItems          ShopItem[]
+  comments           Comment[]
+  commentVotes       CommentVote[]
+  reactions          Reaction[]
+  notifications      Notification[]     @relation("UserNotifications")
+  articleViews       ArticleView[]
+  articleSubscriptions ArticleSubscription[]
+  payments           Payment[]
+  subscriptions      Subscription[]
+  cardRegistrations  CardRegistration[]
+  paymentAccounts    PaymentAccount[]
+  beneficiaries      Beneficiary[]
+  payouts            Payout[]
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  firstName   String
+  lastName    String
+  bio         String?
+  avatarUrl   String?
+  websiteUrl  String?
+  linkedinUrl String?
+  githubUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Article {
+  id              String                @id @default(cuid())
+  title           String
+  slug            String                @unique
+  content         String
+  authorId        String
+  status          ArticleStatus         @default(DRAFT)
+  publishedAt     DateTime?             
+  viewsCount      Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  author          User                  @relation(fields: [authorId], references: [id])
+  comments        Comment[]             @relation("ArticleComments")
+  reactions       Reaction[]            @relation("ArticleReactions")
+  likesCount      Int                   @default(0)
+  views           ArticleView[]
+  subscriptions   ArticleSubscription[]
+}
+
+model Group {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  visibility  GroupVisibility   @default(PUBLIC)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     GroupMembership[]
+  posts       GroupPost[]
+}
+
+model GroupMembership {
+  id        String         @id @default(cuid())
+  groupId   String
+  userId    String
+  role      GroupMemberRole @default(MEMBER)
+  createdAt DateTime       @default(now())
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model GroupPost {
+  id        String    @id @default(cuid())
+  groupId   String
+  authorId  String
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+  comments  Comment[]  @relation("GroupPostComments")
+  reactions Reaction[] @relation("GroupPostReactions")
+  likesCount Int @default(0)
+}
+
+model JobListing {
+  id              String         @id @default(cuid())
+  title           String
+  description     String
+  companyName     String
+  location        String
+  employmentType  EmploymentType
+  salaryMin       Float?
+  salaryMax       Float?
+  salaryPeriod    SalaryPeriod?
+  postedById      String
+  status          JobStatus      @default(OPEN)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  postedBy        User           @relation(fields: [postedById], references: [id])
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  instructorId String
+  level       CourseLevel
+  price       Float
+  status      CourseStatus @default(DRAFT)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  instructor  User         @relation(fields: [instructorId], references: [id])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  startTime   DateTime
+  endTime     DateTime
+  location    String
+  organizerId String
+  type        EventType
+  status      EventStatus @default(UPCOMING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  organizer   User        @relation(fields: [organizerId], references: [id])
+}
+
+model ShopItem {
+  id          String         @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  stock       Int
+  reservedStock Int @default(0)
+  sellerId    String
+  status      ShopItemStatus @default(AVAILABLE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  seller      User           @relation(fields: [sellerId], references: [id])
+}
+
+model Comment {
+  id              String          @id @default(cuid())
+  content         String
+  authorId        String
+  entityId        String
+  entityType      CommentableType
+  parentId        String?
+  upvotesCount    Int             @default(0)
+  downvotesCount  Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  author          User            @relation(fields: [authorId], references: [id])
+  parent          Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies         Comment[]       @relation("CommentReplies")
+  votes           CommentVote[]
+  article         Article?        @relation("ArticleComments", fields: [entityId], references: [id], map: "fk_comment_article")
+  post            GroupPost?      @relation("GroupPostComments", fields: [entityId], references: [id], map: "fk_comment_post")
+}
+
+model CommentVote {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  voteType  VoteType
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+}
+
+model Reaction {
+  id           String        @id @default(cuid())
+  userId       String
+  entityId     String
+  entityType   ReactableType
+  reactionType ReactionType
+  createdAt    DateTime      @default(now())
+  user         User          @relation(fields: [userId], references: [id])
+  article      Article?      @relation("ArticleReactions", fields: [entityId], references: [id], map: "fk_reaction_article")
+  post         GroupPost?    @relation("GroupPostReactions", fields: [entityId], references: [id], map: "fk_reaction_post")
+
+  @@unique([userId, entityId, entityType])
+}
+
+model Notification {
+  id          String                 @id @default(cuid())
+  userId      String
+  type        NotificationType
+  entityId    String
+  entityType  NotificationEntityType
+  message     String
+  isRead      Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  user        User                   @relation("UserNotifications", fields: [userId], references: [id])
+}
+
+model ArticleView {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String?
+  ipAddress String?
+  viewedAt  DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model ArticleSubscription {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([articleId, userId])
+}
+
+model Payment {
+  id          String          @id @default(cuid())
+  userId      String
+  amount      Float
+  currency    String          @default("IDR")
+  status      PaymentStatus   @default(PENDING)
+  paymentType PaymentType
+  entityId    String
+  entityType  PaymentEntityType
+  quantity    Int? // Added quantity field
+  midtransId  String?         @unique
+  stripeId    String?         @unique
+  paypalId    String?         @unique
+  cryptoId    String?         @unique
+  amazonId    String?         @unique
+  appleId     String?         @unique
+  googleId    String?         @unique
+  paymentGateway PaymentGateway
+  localPaymentProvider LocalPaymentProvider?
+  cryptoPaymentProvider CryptoPaymentProvider?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id         String             @id @default(cuid())
+  userId     String
+  plan       String
+  status     SubscriptionStatus @default(ACTIVE)
+  startDate  DateTime
+  endDate    DateTime
+  paymentGateway PaymentGateway
+  stripeId   String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  user       User               @relation(fields: [userId], references: [id])
+}
+
+model CardRegistration {
+  id         String   @id @default(cuid())
+  userId     String
+  midtransId String?   @unique
+  cardToken  String
+  cardType   String
+  maskedCard String
+  paymentGateway PaymentGateway
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model PaymentAccount {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  midtransId    String   @unique
+  accountType   String // e.g., 'bank_account', 'gopay'
+  accountDetails Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Beneficiary {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  account     String
+  bank        String
+  aliasName   String   @unique
+  email       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Payout {
+  id            String       @id @default(cuid())
+  userId        String
+  beneficiaryId String
+  amount        Float
+  status        PayoutStatus @default(PENDING)
+  midtransId    String?      @unique
+  stripeId      String?      @unique
+  paypalId      String?      @unique
+  cryptoId      String?      @unique
+  payoutGateway PayoutGateway
+  localPayoutProvider LocalPayoutProvider?
+  cryptoPayoutProvider CryptoPayoutProvider?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation(fields: [userId], references: [id])
+}
+
+model HealthCheckLog {
+  id          String   @id @default(cuid())
+  status      String
+  checkedAt   DateTime @default(now())
+  responseTimeMs Int
+}
+
+model DataMigrationLog {
+  id          String   @id @default(cuid())
+  migrationName String
+  status      String
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  logs        String?
+}
+
+
+// Enums
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+  INSTRUCTOR
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  APPLE
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum GroupVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum GroupMemberRole {
+  MEMBER
+  ADMIN
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+}
+
+enum SalaryPeriod {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  ANNUALLY
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  FILLED
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EventType {
+  ONLINE
+  IN_PERSON
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  FINISHED
+  CANCELLED
+}
+
+enum ShopItemStatus {
+  AVAILABLE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+enum CommentableType {
+  ARTICLE
+  GROUP_POST
+}
+
+enum ReactableType {
+  ARTICLE
+  GROUP_POST
+  COMMENT
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+enum NotificationType {
+  NEW_COMMENT
+  NEW_REACTION
+  NEW_FOLLOWER
+  POST_MENTION
+  COMMENT_MENTION
+  GROUP_INVITE
+  PAYMENT_SUCCESS
+  PAYMENT_FAILURE
+}
+
+enum NotificationEntityType {
+  USER
+  ARTICLE
+  GROUP_POST
+  COMMENT
+  PAYMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+enum PaymentType {
+  COURSE_PURCHASE
+  SUBSCRIPTION
+  SHOP_ITEM_PURCHASE
+}
+
+enum PaymentEntityType {
+  COURSE
+  SUBSCRIPTION
+  SHOP_ITEM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentGateway {
+  LOCAL_PAYMENT
+  STRIPE
+  PAYPAL
+  CRYPTO
+  AMAZON
+  APPLE
+  GOOGLE
+}
+
+enum LocalPaymentProvider {
+  MIDTRANS
+  XENDIT
+  DOKU
+  FASPAY
+  IPAY88
+}
+
+enum CryptoPaymentProvider {
+  COINGATE
+  COINBASE
+  BITPAY
+}
+
+enum PayoutGateway {
+  LOCAL_PAYOUT
+  STRIPE_PAYOUTS
+  PAYPAL_PAYOUTS
+  CRYPTO_PAYOUTS
+  AMAZON
+  APPLE
+  GOOGLE
+}
+
+enum LocalPayoutProvider {
+  MIDTRANS_IRIS
+  XENDIT_DISBURSEMENT
+  DOKU_PAYOUT
+  FASPAY_PAYOUT
+}
+
+enum CryptoPayoutProvider {
+  COINGATE_PAYOUT
+  COINBASE_PAYOUT
+  BITPAY_PAYOUT
+}
