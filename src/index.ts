@@ -29,7 +29,15 @@ import { UserRole } from '@prisma/client';
 const app = new Elysia();
 
 app.use(cors());
-app.use(swagger());
+app.use(swagger({
+  documentation: {
+    info: {
+      title: 'NTS Elysia API',
+      description: 'API documentation for the NTS Elysia application',
+      version: '1.0.0',
+    },
+  },
+}));
 app.use(jwt({
   name: 'jwt',
   secret: process.env.JWT_SECRET || 'supersecret',
@@ -57,14 +65,16 @@ app.use(beneficiaryModule);
 app.use(payoutModule);
 app.use(cronModule);
 
-// Example protected admin route
-
-
 app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
+
+app.get('/', () => ({
+  message: 'Welcome to the API!',
+}));
 
 console.log(
   `
     App is running at http://${app.server?.hostname}:${app.server?.port}
   `
 );
+
 export default app;
