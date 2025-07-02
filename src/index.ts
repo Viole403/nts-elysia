@@ -65,18 +65,16 @@ app.use(beneficiaryModule);
 app.use(payoutModule);
 app.use(cronModule);
 
+app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
+
 app.get('/', () => ({
   message: 'Welcome to the API!',
 }));
 
-// Development server (runs locally with `bun run src/index.ts`)
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
-  console.log(
-    `
+console.log(
+  `
     App is running at http://${app.server?.hostname}:${app.server?.port}
   `
-  );
-}
+);
 
-export default app.handle;
+export default app;
