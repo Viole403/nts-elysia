@@ -2,7 +2,7 @@
   "name": "nts-elysia",
   "version": "1.0.50",
   "scripts": {
-    "build": "prisma generate",
+    "build": "prisma generate && bun build --compile --minify-whitespace --minify-syntax  --target bun --outfile ./public/server ./src/index.ts",
     "dev:watch": "bun run --watch src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "NODE_ENV=production && bun src/index.ts"
