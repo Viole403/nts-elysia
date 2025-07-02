@@ -2,8 +2,8 @@
   "name": "nts-elysia",
   "version": "1.0.50",
   "scripts": {
-    "build": "prisma generate && bun build --compile --minify-whitespace --minify-syntax  --target bun --outfile ./public/server ./src/index.ts",
-    "dev": "bun run --watch src/index.ts",
+    "build": "prisma generate && bun build --compile --minify-whitespace --minify-syntax  --target bun --outfile ./public/server ./api/index.ts",
+    "dev": "bun run --watch api/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "NODE_ENV=production && bun src/index.ts"
   },
@@ -45,5 +45,5 @@
     "prisma": "^6.10.1",
     "typescript": "^5.4.5"
   },
-  "module": "src/index.js"
+  "module": "api/index.js"
 }
