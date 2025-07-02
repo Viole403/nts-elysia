@@ -2,7 +2,7 @@
   "name": "nts-elysia",
   "version": "1.0.50",
   "scripts": {
-    "build": "bun build src/index.ts",
+    "build": "prisma generate && bun build src/index.ts",
     "dev": "bun run --watch src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
