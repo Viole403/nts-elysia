@@ -1,4 +1,4 @@
-import Doku from 'doku-nodejs-library';
+import doku from 'doku-nodejs-library';
 
 export class DokuService {
   private dokuClient: any;
@@ -6,9 +6,9 @@ export class DokuService {
   constructor() {
     // Initialize Doku client with your credentials
     // Replace with your actual Doku configuration
-    this.dokuClient = new Doku({
-      client_id: process.env.DOKU_CLIENT_ID || 'YOUR_DOKU_CLIENT_ID',
-      shared_key: process.env.DOKU_SHARED_KEY || 'YOUR_DOKU_SHARED_KEY',
+    this.dokuClient = new doku.Snap({
+      client_id: process.env.DOKU_CLIENT_ID || 'DOKU_CLIENT_ID',
+      shared_key: process.env.DOKU_SHARED_KEY || 'DOKU_SHARED_KEY',
       // Add other necessary configurations like environment (sandbox/production)
     });
   }
