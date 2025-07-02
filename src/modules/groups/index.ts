@@ -15,7 +15,7 @@ export class GroupController {
   }
 
   static async findAll(ctx: Context) {
-    const { visibility, creatorId } = ctx.query;
+    const { visibility, creatorId, page, limit } = ctx.query; // Added missing page and limit
     const filters = { visibility: visibility as GroupVisibility, creatorId };
     return GroupService.findAll(filters, page ? Number(page) : undefined, limit ? Number(limit) : undefined);
   }
@@ -101,7 +101,8 @@ export class GroupController {
       ctx.set.status = 401;
       return { message: 'Unauthorized: User not authenticated.' };
     }
-    const { groupId } = ctx.params;
+    // Use 'id' instead of 'groupId' to match the route parameter
+    const { id: groupId } = ctx.params;
 
     const membership = await prisma.groupMembership.findUnique({
       where: {
@@ -121,7 +122,8 @@ export class GroupController {
   }
 
   static async findAllPosts(ctx: Context) {
-    const { groupId } = ctx.params;
+    // Use 'id' instead of 'groupId' to match the route parameter
+    const { id: groupId } = ctx.params;
     const { authorId, page, limit } = ctx.query;
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });
@@ -153,7 +155,8 @@ export class GroupController {
   }
 
   static async findOnePost(ctx: Context) {
-    const { groupId, postId } = ctx.params;
+    // Use 'id' instead of 'groupId' to match the route parameter
+    const { id: groupId, postId } = ctx.params;
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     if (!group) {
@@ -188,7 +191,8 @@ export class GroupController {
       ctx.set.status = 401;
       return { message: 'Unauthorized: User not authenticated.' };
     }
-    const { groupId, postId } = ctx.params;
+    // Use 'id' instead of 'groupId' to match the route parameter
+    const { id: groupId, postId } = ctx.params;
     const post = await GroupService.GroupPosts.findOne(groupId, postId);
     if (!post) {
       ctx.set.status = 404;
@@ -213,7 +217,8 @@ export class GroupController {
       ctx.set.status = 401;
       return { message: 'Unauthorized: User not authenticated.' };
     }
-    const { groupId, postId } = ctx.params;
+    // Use 'id' instead of 'groupId' to match the route parameter
+    const { id: groupId, postId } = ctx.params;
     const post = await GroupService.GroupPosts.findOne(groupId, postId);
     if (!post) {
       ctx.set.status = 404;
@@ -261,21 +266,18 @@ export const groupModule = new Elysia()
         body: updateGroupMemberRoleSchema,
         beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
       })
-      // Group Post Routes
-      .group('/:groupId/posts', (app) =>
-        app
-          .post('/', GroupController.createPost, {
-            body: createGroupPostSchema,
-            beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
-          })
-          .get('/', GroupController.findAllPosts, { query: getGroupPostsQuerySchema })
-          .get('/:postId', GroupController.findOnePost)
-          .put('/:postId', GroupController.updatePost, {
-            body: updateGroupPostSchema,
-            beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
-          })
-          .delete('/:postId', GroupController.deletePost, {
-            beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
-          })
-      )
+      // Group Post Routes - using consistent :id parameter
+      .post('/:id/posts', GroupController.createPost, {
+        body: createGroupPostSchema,
+        beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
+      })
+      .get('/:id/posts', GroupController.findAllPosts, { query: getGroupPostsQuerySchema })
+      .get('/:id/posts/:postId', GroupController.findOnePost)
+      .put('/:id/posts/:postId', GroupController.updatePost, {
+        body: updateGroupPostSchema,
+        beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
+      })
+      .delete('/:id/posts/:postId', GroupController.deletePost, {
+        beforeHandle: [rbac([UserRole.USER, UserRole.ADMIN, UserRole.MODERATOR, UserRole.INSTRUCTOR])],
+      })
   );

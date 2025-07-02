@@ -4,7 +4,9 @@ import { redis } from '../../plugins/redis.plugin';
 
 export class GroupService {
   static async create(data: { name: string; description?: string; visibility?: GroupVisibility; creatorId: string }) {
-    const filters = { visibility: visibility as GroupVisibility, creatorId };
+    // Destructure the data parameter properly
+    const { name, description, visibility, creatorId } = data;
+
     const group = await prisma.group.create({
       data: {
         name,
