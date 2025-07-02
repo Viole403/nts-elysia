@@ -7,7 +7,7 @@ import { amazonService } from '../../services/amazon.service';
 import { appleService } from '../../services/apple.service';
 import { googleService } from '../../services/google.service';
 import { NotificationManager } from '../../utils/notification.manager';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class SubscriptionService {
   static async create(userId: string, plan: string, paymentGateway: PaymentGateway) {
@@ -70,7 +70,7 @@ export class SubscriptionService {
       `Your ${plan} subscription is now active!`
     );
 
-    await redisPublisher.publish(
+    await redis.publish(
       `user:${userId}:subscriptions`,
       JSON.stringify({ type: 'SUBSCRIPTION_CREATED', subscription })
     );
@@ -101,7 +101,7 @@ export class SubscriptionService {
       `Your ${subscription.plan} subscription status changed to ${status}`
     );
 
-    await redisPublisher.publish(
+    await redis.publish(
       `user:${userId}:subscriptions`,
       JSON.stringify({ type: 'SUBSCRIPTION_UPDATED', subscription })
     );

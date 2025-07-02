@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 import { NotificationManager } from '../../utils/notification.manager';
 import { NotificationType, NotificationEntityType, PaymentStatus, PaymentEntityType } from '@prisma/client';
 
@@ -46,7 +46,7 @@ export class CronService {
 
   static async checkExpiredPayments() {
     console.log('Checking for expired payments...');
-    const expiredPaymentKeys = await redisPublisher.keys('pending_payment:*');
+    const expiredPaymentKeys = await redis.keys('pending_payment:*');
 
     for (const key of expiredPaymentKeys) {
       const paymentId = key.replace('pending_payment:', '');
@@ -56,7 +56,7 @@ export class CronService {
 
       if (payment && payment.status === PaymentStatus.PENDING) {
         // Check if the key has actually expired in Redis
-        const ttl = await redisPublisher.ttl(key);
+        const ttl = await redis.ttl(key);
         if (ttl === -2) { // -2 means the key does not exist
           await prisma.payment.update({
             where: { id: paymentId },

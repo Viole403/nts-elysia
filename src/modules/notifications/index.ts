@@ -3,7 +3,7 @@ import { NotificationService } from './service';
 import { getNotificationsQuerySchema } from './model';
 import { rbac } from '../../plugins/rbac';
 import { UserRole } from '@prisma/client';
-import { redisSubscriber } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class NotificationController {
   static async getNotifications(ctx: Context) {
@@ -42,7 +42,7 @@ export class NotificationController {
 
     ctx.set.headers = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' };
 
-    const subscriber = redisSubscriber;
+    const subscriber = redis.duplicate();
 
     const messageHandler = (channel: string, message: string) => {
       if (channel === channel) {

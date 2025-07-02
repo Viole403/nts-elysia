@@ -3,7 +3,7 @@ import { CommentService } from './service';
 import { createCommentSchema, updateCommentSchema, commentVoteSchema, getCommentsQuerySchema } from './model';
 import { authPlugin, rbac } from '../../plugins/auth.plugin';
 import { UserRole, CommentableType } from '@prisma/client';
-import { redisSubscriber } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class CommentController {
   static async create(ctx: Context) {
@@ -82,7 +82,7 @@ export class CommentController {
 
     ctx.set.headers = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' };
 
-    const subscriber = redisSubscriber;
+    const subscriber = redis.duplicate();
 
     const messageHandler = (channel: string, message: string) => {
       if (channel === channel) {
@@ -116,7 +116,7 @@ export class CommentController {
 
     ctx.set.headers = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' };
 
-    const subscriber = redisSubscriber;
+    const subscriber = redis.duplicate();
 
     const messageHandler = (channel: string, message: string) => {
       if (channel === channel) {

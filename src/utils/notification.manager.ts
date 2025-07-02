@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { NotificationType, NotificationEntityType } from '@prisma/client';
-import { redisPublisher } from '../plugins/redis.plugin';
+import { redis } from '../plugins/redis.plugin';
 import { emailService } from '../services/email.service';
 
 export class NotificationManager {
@@ -22,7 +22,7 @@ export class NotificationManager {
     });
 
     // Publish to Redis for real-time updates
-    await redisPublisher.publish(
+    await redis.publish(
       `user:${userId}:notifications`,
       JSON.stringify(notification)
     );

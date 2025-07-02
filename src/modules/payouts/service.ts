@@ -7,7 +7,7 @@ import { cryptoPaymentService } from '../../services/crypto_payment.service';
 import { amazonService } from '../../services/amazon.service';
 import { appleService } from '../../services/apple.service';
 import { googleService } from '../../services/google.service';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class PayoutService {
   static async create(data: { userId: string; beneficiaryId: string; amount: number; notes?: string; payoutGateway: PayoutGateway }) {
@@ -106,14 +106,14 @@ export class PayoutService {
     });
 
     // Invalidate cache for this payout
-    await redisPublisher.del(`payout:${payout.id}`);
+    await redis.del(`payout:${payout.id}`);
 
     return payout;
   }
 
   static async getStatus(referenceNo: string, userId: string) {
     const cacheKey = `payout:${referenceNo}`;
-    const cachedStatus = await redisPublisher.get(cacheKey);
+    const cachedStatus = await redis.get(cacheKey);
     if (cachedStatus) {
       return JSON.parse(cachedStatus);
     }
@@ -164,7 +164,7 @@ export class PayoutService {
         throw new Error('Unsupported payout gateway');
     }
 
-    await redisPublisher.set(cacheKey, JSON.stringify(statusResult), 'EX', 60); // Cache for 1 minute
+    await redis.set(cacheKey, JSON.stringify(statusResult), 'EX', 60); // Cache for 1 minute
 
     return statusResult;
   }

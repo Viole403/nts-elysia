@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test';
 import app from '../src/index';
 import { prisma } from '../src/lib/prisma';
 import { GroupMemberRole, GroupVisibility, UserRole } from '@prisma/client';
-import { redisPublisher } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 
 // Mock Prisma and RedisPublisher
 const mockPrisma = {
@@ -30,7 +30,7 @@ const mockPrisma = {
   },
 };
 
-const mockRedisPublisher = {
+const mockRedis = {
   publish: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
@@ -43,7 +43,7 @@ const mockRedisPublisher = {
 // @ts-ignore
 prisma = mockPrisma;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
+redis = mockRedis;
 
 const mockUserToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXJJZDEyMyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMTcyMDB9.dummy_user_token';
 const mockAdminToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFkbWluVXNlcklkIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDE3MjAwfQ.dummy_admin_token';
@@ -412,7 +412,7 @@ describe('Groups Module', () => {
           authorId: 'userId123',
           ...newPostContent,
         });
-        mockRedisPublisher.publish.mockResolvedValue(1);
+        mockRedis.publish.mockResolvedValue(1);
 
         const response = await app.handle(
           new Request(`http://localhost/groups/${groupId}/posts`,
@@ -436,7 +436,7 @@ describe('Groups Module', () => {
             content: newPostContent.content,
           },
         });
-        expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+        expect(mockRedis.publish).toHaveBeenCalledWith(
           `group:${groupId}:posts`,
           JSON.stringify({ type: 'NEW_POST', post: expect.any(Object) })
         );
@@ -520,7 +520,7 @@ describe('Groups Module', () => {
         mockPrisma.group.findUnique.mockResolvedValue({ id: groupId, members: [{ userId: 'userId123', role: GroupMemberRole.MEMBER }] });
         mockPrisma.groupPost.findUnique.mockResolvedValue(existingPost);
         mockPrisma.groupPost.update.mockResolvedValue({ ...existingPost, ...updatedContent });
-        mockRedisPublisher.publish.mockResolvedValue(1);
+        mockRedis.publish.mockResolvedValue(1);
 
         const response = await app.handle(
           new Request(`http://localhost/groups/${groupId}/posts/${postId}`,
@@ -541,7 +541,7 @@ describe('Groups Module', () => {
           where: { id: postId, groupId },
           data: updatedContent,
         });
-        expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+        expect(mockRedis.publish).toHaveBeenCalledWith(
           `group:${groupId}:posts`,
           JSON.stringify({ type: 'UPDATED_POST', post: expect.any(Object) })
         );
@@ -581,7 +581,7 @@ describe('Groups Module', () => {
         mockPrisma.group.findUnique.mockResolvedValue({ id: groupId, members: [{ userId: 'userId123', role: GroupMemberRole.MEMBER }] });
         mockPrisma.groupPost.findUnique.mockResolvedValue(existingPost);
         mockPrisma.groupPost.delete.mockResolvedValue(existingPost);
-        mockRedisPublisher.publish.mockResolvedValue(1);
+        mockRedis.publish.mockResolvedValue(1);
 
         const response = await app.handle(
           new Request(`http://localhost/groups/${groupId}/posts/${postId}`,
@@ -597,7 +597,7 @@ describe('Groups Module', () => {
         const body = await response.json();
         expect(body.id).toBe(postId);
         expect(mockPrisma.groupPost.delete).toHaveBeenCalledWith({ where: { id: postId, groupId } });
-        expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+        expect(mockRedis.publish).toHaveBeenCalledWith(
           `group:${groupId}:posts`,
           JSON.stringify({ type: 'DELETED_POST', postId })
         );

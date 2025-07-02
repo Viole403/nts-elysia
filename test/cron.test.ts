@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import { prisma } from '../src/lib/prisma';
-import { redisPublisher } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 import { NotificationManager } from '../src/utils/notification.manager';
 import { CronService } from '../src/modules/cron/service';
 import { PaymentEntityType, PaymentStatus } from '@prisma/client';
@@ -22,7 +22,7 @@ const mockPrisma = {
   },
 };
 
-const mockRedisPublisher = {
+const mockRedis = {
   keys: jest.fn(),
   ttl: jest.fn(),
   del: jest.fn(),
@@ -36,7 +36,7 @@ const mockNotificationManager = {
 // @ts-ignore
 prisma = mockPrisma;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
+redis = mockRedis;
 // @ts-ignore
 NotificationManager = mockNotificationManager;
 
@@ -102,8 +102,8 @@ describe('Cron Service', () => {
       const shopItemId = 'shopItem1';
       const quantity = 2;
 
-      mockRedisPublisher.keys.mockResolvedValue([`pending_payment:${expiredPaymentId}`]);
-      mockRedisPublisher.ttl.mockResolvedValue(-2); // Simulate expired key
+      mockRedis.keys.mockResolvedValue([`pending_payment:${expiredPaymentId}`]);
+      mockRedis.ttl.mockResolvedValue(-2); // Simulate expired key
       mockPrisma.payment.findUnique.mockResolvedValue({
         id: expiredPaymentId,
         status: PaymentStatus.PENDING,
@@ -118,8 +118,8 @@ describe('Cron Service', () => {
 
       await CronService.checkExpiredPayments();
 
-      expect(mockRedisPublisher.keys).toHaveBeenCalledWith('pending_payment:*');
-      expect(mockRedisPublisher.ttl).toHaveBeenCalledWith(`pending_payment:${expiredPaymentId}`);
+      expect(mockRedis.keys).toHaveBeenCalledWith('pending_payment:*');
+      expect(mockRedis.ttl).toHaveBeenCalledWith(`pending_payment:${expiredPaymentId}`);
       expect(mockPrisma.payment.update).toHaveBeenCalledWith({
         where: { id: expiredPaymentId },
         data: { status: PaymentStatus.EXPIRED },
@@ -142,7 +142,7 @@ describe('Cron Service', () => {
       const nonPendingPaymentId = 'nonPendingPayment1';
 
       mockRedisPublisher.keys.mockResolvedValue([`pending_payment:${nonPendingPaymentId}`]);
-      mockRedisPublisher.ttl.mockResolvedValue(-2); // Simulate expired key
+      mockRedis.ttl.mockResolvedValue(-2); // Simulate expired key
       mockPrisma.payment.findUnique.mockResolvedValue({
         id: nonPendingPaymentId,
         status: PaymentStatus.SUCCESS,

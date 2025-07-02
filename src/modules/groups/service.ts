@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { GroupVisibility, GroupMemberRole } from '@prisma/client';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class GroupService {
   static async create(data: { name: string; description?: string; visibility?: GroupVisibility; creatorId: string }) {
@@ -137,7 +137,7 @@ export class GroupService {
         },
       });
 
-      await redisPublisher.publish(
+      await redis.publish(
         `group:${groupId}:posts`,
         JSON.stringify({ type: 'NEW_POST', post })
       );
@@ -194,7 +194,7 @@ export class GroupService {
         data: { content },
       });
 
-      await redisPublisher.publish(
+      await redis.publish(
         `group:${groupId}:posts`,
         JSON.stringify({ type: 'UPDATED_POST', post: updatedPost })
       );
@@ -212,7 +212,7 @@ export class GroupService {
         where: { id: postId, groupId },
       });
 
-      await redisPublisher.publish(
+      await redis.publish(
         `group:${groupId}:posts`,
         JSON.stringify({ type: 'DELETED_POST', postId })
       );

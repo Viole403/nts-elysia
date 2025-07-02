@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class BeneficiaryService {
   static async create(data: { userId: string; name: string; account: string; bank: string; aliasName: string; email: string }) {
@@ -7,13 +7,13 @@ export class BeneficiaryService {
       data,
     });
     // Invalidate cache for this user's beneficiaries
-    await redisPublisher.del(`beneficiaries:user:${data.userId}`);
+    await redis.del(`beneficiaries:user:${data.userId}`);
     return beneficiary;
   }
 
   static async findAll(userId: string) {
     const cacheKey = `beneficiaries:user:${userId}`;
-    const cachedBeneficiaries = await redisPublisher.get(cacheKey);
+    const cachedBeneficiaries = await redis.get(cacheKey);
     if (cachedBeneficiaries) {
       return JSON.parse(cachedBeneficiaries);
     }
@@ -21,7 +21,7 @@ export class BeneficiaryService {
     const beneficiaries = await prisma.beneficiary.findMany({
       where: { userId },
     });
-    await redisPublisher.set(cacheKey, JSON.stringify(beneficiaries), 'EX', 3600); // Cache for 1 hour
+    await redis.set(cacheKey, JSON.stringify(beneficiaries), 'EX', 3600); // Cache for 1 hour
     return beneficiaries;
   }
 
@@ -39,7 +39,7 @@ export class BeneficiaryService {
       data,
     });
     // Invalidate cache for this user's beneficiaries
-    await redisPublisher.del(`beneficiaries:user:${userId}`);
+    await redis.del(`beneficiaries:user:${userId}`);
     return updatedBeneficiary;
   }
 
@@ -56,7 +56,7 @@ export class BeneficiaryService {
       where: { id },
     });
     // Invalidate cache for this user's beneficiaries
-    await redisPublisher.del(`beneficiaries:user:${userId}`);
+    await redis.del(`beneficiaries:user:${userId}`);
     return deletedBeneficiary;
   }
 }

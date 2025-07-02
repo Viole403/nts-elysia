@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test';
 import app from '../src/index';
 import { prisma } from '../src/lib/prisma';
 import { CommentableType, NotificationEntityType, NotificationType, UserRole, VoteType } from '@prisma/client';
-import { redisPublisher, redisSubscriber } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 
 // Mock Prisma and Redis
 const mockPrisma = {
@@ -28,18 +28,16 @@ const mockPrisma = {
   },
 };
 
-const mockRedisPublisher = {
+// Mock Prisma and Redis
+const mockRedis = {
   publish: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
   get: jest.fn(),
   keys: jest.fn(),
   ttl: jest.fn(),
-};
-
-const mockRedisSubscriber = {
+  duplicate: jest.fn(() => mockRedis), // Mock duplicate for subscriber
   subscribe: jest.fn((channel, cb) => {
-    // Simulate immediate callback for subscription success
     cb(null, 1);
   }),
   on: jest.fn(),
@@ -56,9 +54,7 @@ const mockNotificationManager = {
 // @ts-ignore
 prisma = mockPrisma;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
-// @ts-ignore
-redisSubscriber = mockRedisSubscriber;
+redis = mockRedis;
 // @ts-ignore
 // Mocking NotificationManager directly in the test file for simplicity
 // In a real app, you might want to mock the entire module or use a DI container
@@ -88,7 +84,7 @@ describe('Comments Module', () => {
         ...newComment,
       });
       mockPrisma.article.findUnique.mockResolvedValue({ id: entityId, authorId: 'articleAuthor123' });
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
       mockNotificationManager.createNotification.mockResolvedValue({});
 
       const response = await app.handle(
@@ -114,7 +110,7 @@ describe('Comments Module', () => {
           entityType,
         }),
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+      expect(mockRedis.publish).toHaveBeenCalledWith(
         `comments:${entityType}:${entityId}`,
         JSON.stringify({ type: 'NEW_COMMENT', comment: expect.any(Object) })
       );
@@ -183,7 +179,7 @@ describe('Comments Module', () => {
 
       mockPrisma.comment.findUnique.mockResolvedValue(existingComment);
       mockPrisma.comment.update.mockResolvedValue({ ...existingComment, ...updatedContent });
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request(`http://localhost/comments/${commentId}`,
@@ -204,7 +200,7 @@ describe('Comments Module', () => {
         where: { id: commentId },
         data: updatedContent,
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+      expect(mockRedis.publish).toHaveBeenCalledWith(
         `comments:${existingComment.entityType}:${existingComment.entityId}`,
         JSON.stringify({ type: 'UPDATED_COMMENT', comment: expect.any(Object) })
       );
@@ -240,7 +236,7 @@ describe('Comments Module', () => {
 
       mockPrisma.comment.findUnique.mockResolvedValue(existingComment);
       mockPrisma.comment.delete.mockResolvedValue(existingComment);
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request(`http://localhost/comments/${commentId}`,
@@ -256,7 +252,7 @@ describe('Comments Module', () => {
       const body = await response.json();
       expect(body.id).toBe(commentId);
       expect(mockPrisma.comment.delete).toHaveBeenCalledWith({ where: { id: commentId } });
-      expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+      expect(mockRedis.publish).toHaveBeenCalledWith(
         `comments:${existingComment.entityType}:${existingComment.entityId}`,
         JSON.stringify({ type: 'DELETED_COMMENT', commentId: existingComment.id })
       );
@@ -291,7 +287,7 @@ describe('Comments Module', () => {
       mockPrisma.commentVote.create.mockResolvedValue({});
       mockPrisma.comment.update.mockResolvedValue({ ...existingComment, upvotesCount: 1 });
       mockPrisma.comment.findUnique.mockResolvedValue(existingComment);
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
       mockNotificationManager.createNotification.mockResolvedValue({});
 
       const response = await app.handle(
@@ -312,7 +308,7 @@ describe('Comments Module', () => {
       expect(mockPrisma.commentVote.create).toHaveBeenCalledWith({
         data: { commentId, userId: 'userId123', voteType: VoteType.UPVOTE },
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalledWith(
+      expect(mockRedis.publish).toHaveBeenCalledWith(
         `comments:${commentId}:votes`,
         JSON.stringify({ type: 'VOTE_UPDATED', commentId, voteType: VoteType.UPVOTE, updatedComment: expect.any(Object) })
       );
@@ -333,7 +329,7 @@ describe('Comments Module', () => {
       mockPrisma.commentVote.update.mockResolvedValue({});
       mockPrisma.comment.update.mockResolvedValue({ ...existingComment, upvotesCount: 0, downvotesCount: 1 });
       mockPrisma.comment.findUnique.mockResolvedValue(existingComment);
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
       mockNotificationManager.createNotification.mockResolvedValue({});
 
       const response = await app.handle(
@@ -356,7 +352,7 @@ describe('Comments Module', () => {
         where: { id: 'vote1' },
         data: { voteType: VoteType.DOWNVOTE },
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
       expect(mockNotificationManager.createNotification).toHaveBeenCalled();
     });
 
@@ -368,7 +364,7 @@ describe('Comments Module', () => {
       mockPrisma.commentVote.delete.mockResolvedValue({});
       mockPrisma.comment.update.mockResolvedValue({ ...existingComment, upvotesCount: 0 });
       mockPrisma.comment.findUnique.mockResolvedValue(existingComment);
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
       mockNotificationManager.createNotification.mockResolvedValue({});
 
       const response = await app.handle(
@@ -387,7 +383,7 @@ describe('Comments Module', () => {
       const body = await response.json();
       expect(body.upvotesCount).toBe(0);
       expect(mockPrisma.commentVote.delete).toHaveBeenCalledWith({ where: { id: 'vote1' } });
-      expect(mockRedisPublisher.publish).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
       expect(mockNotificationManager.createNotification).toHaveBeenCalled();
     });
   });

@@ -1,7 +1,7 @@
 import { prisma } from '../../../lib/prisma';
 import { NotificationManager } from '../../../utils/notification.manager';
 import { NotificationType, NotificationEntityType } from '@prisma/client';
-import { redisPublisher } from '../../../plugins/redis.plugin';
+import { redis } from '../../../plugins/redis.plugin';
 
 export class ArticleSubscriptionService {
   static async subscribe(articleId: string, userId: string) {
@@ -25,7 +25,7 @@ export class ArticleSubscriptionService {
       },
     });
 
-    await redisPublisher.publish(
+    await redis.publish(
       `article:${articleId}:subscriptions`,
       JSON.stringify({ type: 'SUBSCRIBED', userId, articleId })
     );
@@ -43,7 +43,7 @@ export class ArticleSubscriptionService {
       },
     });
 
-    await redisPublisher.publish(
+    await redis.publish(
       `article:${articleId}:subscriptions`,
       JSON.stringify({ type: 'UNSUBSCRIBED', userId, articleId })
     );
@@ -66,7 +66,7 @@ export class ArticleSubscriptionService {
       );
     }
 
-    await redisPublisher.publish(
+    await redis.publish(
       `article:${articleId}:updates`,
       JSON.stringify({ type: 'ARTICLE_UPDATED', articleId, title: articleTitle })
     );

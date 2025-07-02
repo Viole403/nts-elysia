@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { CommentableType, VoteType, NotificationType, NotificationEntityType } from '@prisma/client';
 import { NotificationManager } from '../../utils/notification.manager';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class CommentService {
   static async create(data: { content: string; authorId: string; entityId: string; entityType: CommentableType; parentId?: string }) {
@@ -51,7 +51,7 @@ export class CommentService {
     }
 
     // Publish to Redis for real-time updates
-    await redisPublisher.publish(
+    await redis.publish(
       `comments:${entityType}:${entityId}`,
       JSON.stringify({ type: 'NEW_COMMENT', comment })
     );
@@ -136,7 +136,7 @@ export class CommentService {
     });
 
     // Publish to Redis for real-time updates
-    await redisPublisher.publish(
+    await redis.publish(
       `comments:${updatedComment.entityType}:${updatedComment.entityId}`,
       JSON.stringify({ type: 'UPDATED_COMMENT', comment: updatedComment })
     );
@@ -150,7 +150,7 @@ export class CommentService {
     });
 
     // Publish to Redis for real-time updates
-    await redisPublisher.publish(
+    await redis.publish(
       `comments:${deletedComment.entityType}:${deletedComment.entityId}`,
       JSON.stringify({ type: 'DELETED_COMMENT', commentId: deletedComment.id })
     );
@@ -238,7 +238,7 @@ export class CommentService {
     }
 
     // Publish to Redis for real-time vote updates
-    await redisPublisher.publish(
+    await redis.publish(
       `comments:${commentId}:votes`,
       JSON.stringify({ type: 'VOTE_UPDATED', commentId, voteType, updatedComment })
     );

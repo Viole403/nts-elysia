@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test';
 import app from '../src/index';
 import { prisma } from '../src/lib/prisma';
 import { UserRole } from '@prisma/client';
-import { redisSubscriber } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 
 // Mock Prisma and RedisSubscriber
 const mockPrisma = {
@@ -12,9 +12,8 @@ const mockPrisma = {
   },
 };
 
-const mockRedisSubscriber = {
+const mockRedis = {
   subscribe: jest.fn((channel, cb) => {
-    // Simulate immediate callback for subscription success
     cb(null, 1);
   }),
   on: jest.fn(),
@@ -26,7 +25,7 @@ const mockRedisSubscriber = {
 // @ts-ignore
 prisma = mockPrisma;
 // @ts-ignore
-redisSubscriber = mockRedisSubscriber;
+redis = mockRedis;
 
 const mockUserToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXJJZDEyMyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMTcyMDB9.dummy_user_token';
 
@@ -186,7 +185,7 @@ describe('Notifications Module', () => {
 
       // Since we are mocking redisSubscriber, we can't truly test the stream content here
       // but we can verify that subscribe was called.
-      expect(mockRedisSubscriber.subscribe).toHaveBeenCalledWith(
+      expect(mockRedis.subscribe).toHaveBeenCalledWith(
         'user:userId123:notifications',
         expect.any(Function)
       );

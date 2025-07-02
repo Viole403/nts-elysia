@@ -8,7 +8,7 @@ import { amazonService } from '../../services/amazon.service';
 import { appleService } from '../../services/apple.service';
 import { googleService } from '../../services/google.service';
 import { NotificationManager } from '../../utils/notification.manager';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 import Stripe from 'stripe';
 
 export class PaymentService {
@@ -75,7 +75,7 @@ export class PaymentService {
         });
 
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, redirect_url: transactionDetails.redirect_url, payment_instructions: transactionDetails.payment_instructions };
 
@@ -116,7 +116,7 @@ export class PaymentService {
           },
         });
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, redirect_url: stripeSession.url, payment_instructions: 'Redirect to Stripe checkout.' };
 
@@ -153,7 +153,7 @@ export class PaymentService {
           },
         });
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, orderId: paypalOrder.id, approval_url: paypalOrder.links.find((link: any) => link.rel === 'approve')?.href, payment_instructions: 'Redirect to PayPal for approval.' };
 
@@ -175,7 +175,7 @@ export class PaymentService {
           },
         });
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, ...cryptoPayment, payment_instructions: cryptoPayment.payment_instructions };
 
@@ -196,7 +196,7 @@ export class PaymentService {
           },
         });
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, redirect_url: amazonPayment.redirect_url, payment_instructions: amazonPayment.payment_instructions };
 
@@ -217,7 +217,7 @@ export class PaymentService {
           },
         });
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, redirect_url: applePayment.redirect_url, payment_instructions: applePayment.payment_instructions };
 
@@ -238,7 +238,7 @@ export class PaymentService {
           },
         });
         // Store pending payment in Redis with TTL
-        await redisPublisher.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
+        await redis.set(`pending_payment:${paymentRecord.id}`, 'true', 'EX', 900); // 15 minutes TTL
 
         return { ...paymentRecord, redirect_url: googlePayment.redirect_url, payment_instructions: googlePayment.payment_instructions };
 
@@ -338,12 +338,12 @@ export class PaymentService {
             NotificationEntityType.PAYMENT,
             `Your payment for ${payment.entityType} was successful!`
           );
-          await redisPublisher.publish(
+          await redis.publish(
             `user:${payment.userId}:payments`,
             JSON.stringify({ type: 'PAYMENT_SUCCESS', payment })
           );
           // Remove from Redis
-          await redisPublisher.del(`pending_payment:${payment.id}`);
+          await redis.del(`pending_payment:${payment.id}`);
         }
         break;
       case 'payment_intent.succeeded':
@@ -371,12 +371,12 @@ export class PaymentService {
             NotificationEntityType.PAYMENT,
             `Your payment for ${payment.entityType} was successful!`
           );
-          await redisPublisher.publish(
+          await redis.publish(
             `user:${payment.userId}:payments`,
             JSON.stringify({ type: 'PAYMENT_SUCCESS', payment })
           );
           // Remove from Redis
-          await redisPublisher.del(`pending_payment:${payment.id}`);
+          await redis.del(`pending_payment:${payment.id}`);
         }
         break;
       default:
@@ -420,12 +420,12 @@ export class PaymentService {
             NotificationEntityType.PAYMENT,
             `Your payment for ${payment.entityType} was successful!`
           );
-          await redisPublisher.publish(
+          await redis.publish(
             `user:${payment.userId}:payments`,
             JSON.stringify({ type: 'PAYMENT_SUCCESS', payment })
           );
           // Remove from Redis
-          await redisPublisher.del(`pending_payment:${payment.id}`);
+          await redis.del(`pending_payment:${payment.id}`);
         }
         break;
       default:

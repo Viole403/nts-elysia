@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { ReactableType, ReactionType, NotificationType, NotificationEntityType } from '@prisma/client';
 import { NotificationManager } from '../../utils/notification.manager';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class ReactionService {
   static async toggleReaction(userId: string, entityId: string, entityType: ReactableType, reactionType: ReactionType) {
@@ -39,7 +39,7 @@ export class ReactionService {
       }
 
       // Publish to Redis for real-time updates
-      await redisPublisher.publish(
+      await redis.publish(
         `reactions:${entityType}:${entityId}`,
         JSON.stringify({ type: 'REACTION_REMOVED', userId, entityId, entityType, reactionType })
       );
@@ -93,7 +93,7 @@ export class ReactionService {
       }
 
       // Publish to Redis for real-time updates
-      await redisPublisher.publish(
+      await redis.publish(
         `reactions:${entityType}:${entityId}`,
         JSON.stringify({ type: 'REACTION_ADDED', reaction: newReaction, updatedEntity })
       );

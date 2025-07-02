@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import app from '../src/index';
 import { prisma } from '../src/lib/prisma';
-import { redisPublisher } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 
 // Mock Prisma and RedisPublisher
 const mockPrisma = {
@@ -14,7 +14,8 @@ const mockPrisma = {
   },
 };
 
-const mockRedisPublisher = {
+// Mock Prisma and Redis
+const mockRedis = {
   publish: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
@@ -27,7 +28,7 @@ const mockRedisPublisher = {
 // @ts-ignore
 prisma = mockPrisma;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
+redis = mockRedis;
 
 const mockUserToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXJJZDEyMyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMTcyMDB9.dummy_user_token';
 
@@ -51,7 +52,7 @@ describe('Beneficiaries Module', () => {
         userId: 'userId123',
         ...newBeneficiary,
       });
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/beneficiaries', {
@@ -100,7 +101,7 @@ describe('Beneficiaries Module', () => {
         { id: 'b1', userId: 'userId123', aliasName: 'MyAccount1' },
         { id: 'b2', userId: 'userId123', aliasName: 'MyAccount2' },
       ];
-      mockRedisPublisher.get.mockResolvedValue(JSON.stringify(mockBeneficiaries));
+      mockRedis.get.mockResolvedValue(JSON.stringify(mockBeneficiaries));
 
       const response = await app.handle(
         new Request('http://localhost/beneficiaries', {
@@ -114,7 +115,7 @@ describe('Beneficiaries Module', () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toEqual(mockBeneficiaries);
-      expect(mockRedisPublisher.get).toHaveBeenCalledWith('beneficiaries:user:userId123');
+      expect(mockRedis.get).toHaveBeenCalledWith('beneficiaries:user:userId123');
       expect(mockPrisma.beneficiary.findMany).not.toHaveBeenCalled();
     });
 
@@ -123,9 +124,9 @@ describe('Beneficiaries Module', () => {
         { id: 'b1', userId: 'userId123', aliasName: 'MyAccount1' },
         { id: 'b2', userId: 'userId123', aliasName: 'MyAccount2' },
       ];
-      mockRedisPublisher.get.mockResolvedValue(null);
+      mockRedis.get.mockResolvedValue(null);
       mockPrisma.beneficiary.findMany.mockResolvedValue(mockBeneficiaries);
-      mockRedisPublisher.set.mockResolvedValue('OK');
+      mockRedis.set.mockResolvedValue('OK');
 
       const response = await app.handle(
         new Request('http://localhost/beneficiaries', {
@@ -139,9 +140,9 @@ describe('Beneficiaries Module', () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toEqual(mockBeneficiaries);
-      expect(mockRedisPublisher.get).toHaveBeenCalledWith('beneficiaries:user:userId123');
+      expect(mockRedis.get).toHaveBeenCalledWith('beneficiaries:user:userId123');
       expect(mockPrisma.beneficiary.findMany).toHaveBeenCalledWith({ where: { userId: 'userId123' } });
-      expect(mockRedisPublisher.set).toHaveBeenCalledWith('beneficiaries:user:userId123', JSON.stringify(mockBeneficiaries), 'EX', 3600);
+      expect(mockRedis.set).toHaveBeenCalledWith('beneficiaries:user:userId123', JSON.stringify(mockBeneficiaries), 'EX', 3600);
     });
 
     it('should return 401 if not authenticated', async () => {
@@ -163,7 +164,7 @@ describe('Beneficiaries Module', () => {
 
       mockPrisma.beneficiary.findFirst.mockResolvedValue(existingBeneficiary);
       mockPrisma.beneficiary.update.mockResolvedValue({ ...existingBeneficiary, ...updatedData });
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request(`http://localhost/beneficiaries/${beneficiaryId}`,
@@ -234,7 +235,7 @@ describe('Beneficiaries Module', () => {
 
       mockPrisma.beneficiary.findFirst.mockResolvedValue(existingBeneficiary);
       mockPrisma.beneficiary.delete.mockResolvedValue(existingBeneficiary);
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request(`http://localhost/beneficiaries/${beneficiaryId}`,

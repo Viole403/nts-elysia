@@ -9,7 +9,7 @@ import { cryptoPaymentService } from '../src/services/crypto_payment.service';
 import { amazonService } from '../src/services/amazon.service';
 import { appleService } from '../src/services/apple.service';
 import { googleService } from '../src/services/google.service';
-import { redisPublisher } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 import { NotificationManager } from '../src/utils/notification.manager';
 
 // Mock Prisma and external services
@@ -72,7 +72,7 @@ const mockGoogleService = {
   getTransactionStatus: jest.fn(),
 };
 
-const mockRedisPublisher = {
+const mockRedis = {
   publish: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
@@ -100,7 +100,7 @@ appleService = mockAppleService;
 // @ts-ignore
 googleService = mockGoogleService;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
+redis = mockRedis;
 // @ts-ignore
 NotificationManager = mockNotificationManager;
 
@@ -125,7 +125,7 @@ describe('Payments Module', () => {
       mockPrisma.shopItem.findUnique.mockResolvedValue(mockShopItem);
       mockLocalPaymentService.createPayment.mockResolvedValue(mockLocalPaymentResponse);
       mockPrisma.payment.create.mockResolvedValue({ id: 'payment1', ...paymentData, amount: 100 });
-      mockRedisPublisher.set.mockResolvedValue('OK');
+      mockRedis.set.mockResolvedValue('OK');
 
       const response = await app.handle(
         new Request('http://localhost/payments/create', {
@@ -160,7 +160,7 @@ describe('Payments Module', () => {
       mockPrisma.course.findUnique.mockResolvedValue(mockCourse);
       mockStripeService.createCheckoutSession.mockResolvedValue(mockStripeSession);
       mockPrisma.payment.create.mockResolvedValue({ id: 'payment2', ...paymentData, amount: 200 });
-      mockRedisPublisher.set.mockResolvedValue('OK');
+      mockRedis.set.mockResolvedValue('OK');
 
       const response = await app.handle(
         new Request('http://localhost/payments/create', {
@@ -212,7 +212,7 @@ describe('Payments Module', () => {
       mockLocalPaymentService.getTransactionStatus.mockResolvedValue({ status: 'COMPLETED' });
       mockPrisma.payment.findFirst.mockResolvedValue(mockPayment);
       mockPrisma.payment.updateMany.mockResolvedValue({ count: 1 });
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request(`http://localhost/payments/${paymentGateway}/${orderId}/status`,
@@ -229,7 +229,7 @@ describe('Payments Module', () => {
       expect(body.status).toBe(PaymentStatus.SUCCESS);
       expect(mockLocalPaymentService.getTransactionStatus).toHaveBeenCalledWith(orderId);
       expect(mockPrisma.payment.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { status: PaymentStatus.SUCCESS } }));
-      expect(mockRedisPublisher.del).toHaveBeenCalledWith(`pending_payment:${mockPayment.id}`);
+      expect(mockRedis.del).toHaveBeenCalledWith(`pending_payment:${mockPayment.id}`);
     });
 
     it('should return 401 if not authenticated', async () => {
@@ -258,8 +258,8 @@ describe('Payments Module', () => {
       mockPrisma.payment.findFirst.mockResolvedValue(mockPayment);
       mockPrisma.shopItem.update.mockResolvedValue({});
       mockNotificationManager.createNotification.mockResolvedValue({});
-      mockRedisPublisher.publish.mockResolvedValue(1);
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/payments/webhooks/local-payment', {
@@ -281,7 +281,7 @@ describe('Payments Module', () => {
         },
       });
       expect(mockNotificationManager.createNotification).toHaveBeenCalled();
-      expect(mockRedisPublisher.del).toHaveBeenCalledWith(`pending_payment:${mockPayment.id}`);
+      expect(mockRedis.del).toHaveBeenCalledWith(`pending_payment:${mockPayment.id}`);
     });
 
     it('should handle local payment notification (failed) and release reserved stock', async () => {
@@ -294,8 +294,8 @@ describe('Payments Module', () => {
       mockPrisma.payment.findFirst.mockResolvedValue(mockPayment);
       mockPrisma.shopItem.update.mockResolvedValue({});
       mockNotificationManager.createNotification.mockResolvedValue({});
-      mockRedisPublisher.publish.mockResolvedValue(1);
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/payments/webhooks/local-payment', {
@@ -314,7 +314,7 @@ describe('Payments Module', () => {
         data: { reservedStock: { decrement: 1 } },
       });
       expect(mockNotificationManager.createNotification).toHaveBeenCalled();
-      expect(mockRedisPublisher.del).toHaveBeenCalledWith(`pending_payment:${mockPayment.id}`);
+      expect(mockRedis.del).toHaveBeenCalledWith(`pending_payment:${mockPayment.id}`);
     });
 
     // Add more webhook tests for Stripe, PayPal, Crypto, Amazon, Apple, Google

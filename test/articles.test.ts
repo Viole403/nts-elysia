@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from 'bun:test';
 import app from '../src/index';
 import { prisma } from '../src/lib/prisma';
 import { ArticleStatus, UserRole } from '@prisma/client';
-import { redisPublisher } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 
 // Mock Prisma and RedisPublisher
 const mockPrisma = {
@@ -26,7 +26,8 @@ const mockPrisma = {
   },
 };
 
-const mockRedisPublisher = {
+// Mock Prisma and Redis
+const mockRedis = {
   publish: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
@@ -39,7 +40,7 @@ const mockRedisPublisher = {
 // @ts-ignore
 prisma = mockPrisma;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
+redis = mockRedis;
 
 const mockAdminToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFkbWluVXNlcklkIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDE3MjAwfQ.dummy_admin_token';
 const mockInstructorToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Imluc3RydWN0b3JJZDEyMyIsImVtYWlsIjoiaW5zdHJ1Y3RvckBleGFtcGxlLmNvbSIsInJvbGUiOiJJTlNUUlVDVE9SIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMTcyMDB9.dummy_instructor_token';
@@ -157,7 +158,7 @@ describe('Articles Module', () => {
       mockPrisma.article.findUnique.mockResolvedValue(mockArticle);
       mockPrisma.articleView.findFirst.mockResolvedValue(null);
       mockPrisma.article.update.mockResolvedValue({ ...mockArticle, viewsCount: 1 });
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/articles/article-1', {
@@ -173,7 +174,7 @@ describe('Articles Module', () => {
         where: { slug: 'article-1' },
         data: { viewsCount: { increment: 1 } },
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
     });
 
     it('should return 404 if article not found', async () => {
@@ -197,7 +198,7 @@ describe('Articles Module', () => {
       mockPrisma.article.findUnique.mockResolvedValue(existingArticle);
       mockPrisma.article.update.mockResolvedValue({ ...existingArticle, ...updatedData });
       mockPrisma.articleSubscription.findMany.mockResolvedValue([]);
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/articles/old-title', {
@@ -218,7 +219,7 @@ describe('Articles Module', () => {
         where: { slug: 'old-title' },
         data: updatedData,
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
     });
 
     it('should return 403 if user is not author or admin', async () => {
@@ -288,7 +289,7 @@ describe('Articles Module', () => {
       mockPrisma.article.findUnique.mockResolvedValue(mockArticle);
       mockPrisma.articleSubscription.findUnique.mockResolvedValue(null);
       mockPrisma.articleSubscription.create.mockResolvedValue({ articleId: 'a1', userId: 'userId123' });
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/articles/article-1/subscribe', {
@@ -306,7 +307,7 @@ describe('Articles Module', () => {
       expect(mockPrisma.articleSubscription.create).toHaveBeenCalledWith({
         data: { articleId: 'a1', userId: 'userId123' },
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
     });
 
     it('should return 409 if already subscribed', async () => {
@@ -334,7 +335,7 @@ describe('Articles Module', () => {
       const mockArticle = { id: 'a1', title: 'Article 1', slug: 'article-1', authorId: 'auth1' };
       mockPrisma.article.findUnique.mockResolvedValue(mockArticle);
       mockPrisma.articleSubscription.delete.mockResolvedValue({ articleId: 'a1', userId: 'userId123' });
-      mockRedisPublisher.publish.mockResolvedValue(1);
+      mockRedis.publish.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/articles/article-1/subscribe', {
@@ -357,7 +358,7 @@ describe('Articles Module', () => {
           },
         },
       });
-      expect(mockRedisPublisher.publish).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
     });
 
     it('should return 404 if article not found', async () => {

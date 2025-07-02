@@ -3,7 +3,7 @@ import { ReactionService } from './service';
 import { createReactionSchema } from './model';
 import { authPlugin, rbac } from '../../plugins/auth.plugin';
 import { UserRole, ReactableType, ReactionType } from '@prisma/client';
-import { redisSubscriber } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class ReactionController {
   static async toggleReaction(ctx: Context) {
@@ -22,7 +22,7 @@ export class ReactionController {
 
     ctx.set.headers = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' };
 
-    const subscriber = redisSubscriber;
+    const subscriber = redis.duplicate();
 
     const messageHandler = (channel: string, message: string) => {
       if (channel === channel) {

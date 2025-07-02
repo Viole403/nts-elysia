@@ -2,7 +2,7 @@ import { prisma } from '../../lib/prisma';
 import slugify from 'slugify';
 import { ArticleStatus } from '@prisma/client';
 import { ArticleSubscriptionService } from './subscription/service';
-import { redisPublisher } from '../../plugins/redis.plugin';
+import { redis } from '../../plugins/redis.plugin';
 
 export class ArticleService {
   static async create(data: any) {
@@ -79,7 +79,7 @@ export class ArticleService {
           data: { viewsCount: { increment: 1 } },
         });
         // Publish to Redis for real-time view updates
-        await redisPublisher.publish(
+        await redis.publish(
           `article:${article.id}:views`,
           JSON.stringify({ type: 'VIEW_INCREMENTED', articleId: article.id, viewsCount: updatedArticle.viewsCount })
         );
@@ -100,7 +100,7 @@ export class ArticleService {
     }
 
     // Publish to Redis for general article updates
-    await redisPublisher.publish(
+    await redis.publish(
       `article:${updatedArticle.id}:updates`,
       JSON.stringify({ type: 'ARTICLE_UPDATED', article: updatedArticle })
     );

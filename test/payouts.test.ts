@@ -9,7 +9,7 @@ import { cryptoPaymentService } from '../src/services/crypto_payment.service';
 import { amazonService } from '../src/services/amazon.service';
 import { appleService } from '../src/services/apple.service';
 import { googleService } from '../src/services/google.service';
-import { redisPublisher } from '../src/plugins/redis.plugin';
+import { redis } from '../src/plugins/redis.plugin';
 
 // Mock Prisma and external services
 const mockPrisma = {
@@ -62,10 +62,11 @@ const mockGoogleService = {
   getPayoutStatus: jest.fn(),
 };
 
-const mockRedisPublisher = {
+const mockRedis = {
   publish: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
+  get: jest.fn(),
 };
 
 // Replace actual imports with mocks
@@ -86,7 +87,7 @@ appleService = mockAppleService;
 // @ts-ignore
 googleService = mockGoogleService;
 // @ts-ignore
-redisPublisher = mockRedisPublisher;
+redis = mockRedis;
 
 const mockAdminToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFkbWluVXNlcklkIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDE3MjAwfQ.dummy_admin_token';
 const mockInstructorToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Imluc3RydWN0b3JJZDEyMyIsImVtYWlsIjoiaW5zdHJ1Y3RvckBleGFtcGxlLmNvbSIsInJvbGUiOiJJTlNUUlVDVE9SIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMTcyMDB9.dummy_instructor_token';
@@ -110,7 +111,7 @@ describe('Payouts Module', () => {
       mockPrisma.beneficiary.findFirst.mockResolvedValue(mockBeneficiary);
       mockLocalPaymentService.createPayout.mockResolvedValue(mockPayoutResult);
       mockPrisma.payout.create.mockResolvedValue({ id: 'payout1', ...payoutData, userId: 'userId123' });
-      mockRedisPublisher.del.mockResolvedValue(1);
+      mockRedis.del.mockResolvedValue(1);
 
       const response = await app.handle(
         new Request('http://localhost/payouts', {
@@ -180,7 +181,7 @@ describe('Payouts Module', () => {
       const mockPayout = { id: 'payout1', midtransId: referenceNo, payoutGateway: PayoutGateway.LOCAL_PAYOUT, userId: 'userId123' };
       const mockStatusResult = { status: 'COMPLETED' };
 
-      mockRedisPublisher.get.mockResolvedValue(JSON.stringify(mockStatusResult));
+      mockRedis.get.mockResolvedValue(JSON.stringify(mockStatusResult));
       mockPrisma.payout.findFirst.mockResolvedValue(mockPayout);
 
       const response = await app.handle(
@@ -196,7 +197,7 @@ describe('Payouts Module', () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toEqual(mockStatusResult);
-      expect(mockRedisPublisher.get).toHaveBeenCalledWith(`payout:${referenceNo}`);
+      expect(mockRedis.get).toHaveBeenCalledWith(`payout:${referenceNo}`);
       expect(mockPrisma.payout.findFirst).not.toHaveBeenCalled();
     });
 
@@ -223,7 +224,7 @@ describe('Payouts Module', () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toEqual(mockStatusResult);
-      expect(mockRedisPublisher.get).toHaveBeenCalledWith(`payout:${referenceNo}`);
+      expect(mockRedis.get).toHaveBeenCalledWith(`payout:${referenceNo}`);
       expect(mockPrisma.payout.findFirst).toHaveBeenCalled();
       expect(mockLocalPaymentService.getPayoutStatus).toHaveBeenCalledWith(referenceNo);
       expect(mockRedisPublisher.set).toHaveBeenCalledWith(`payout:${referenceNo}`, JSON.stringify(mockStatusResult), 'EX', 60);

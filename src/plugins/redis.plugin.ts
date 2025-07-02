@@ -1,19 +1,14 @@
 import { Elysia } from 'elysia';
-import Redis from 'ioredis';
+import { Redis } from '@upstash/redis';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || 'http://localhost:8080';
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || 'your-token';
 
-export const redisPublisher = new Redis(redisUrl);
-export const redisSubscriber = new Redis(redisUrl);
+export const redis = new Redis({
+  url: redisUrl,
+  token: redisToken,
+});
 
-redisPublisher.on('connect', () => console.log('Redis Publisher connected'));
-redisPublisher.on('error', (err: any) => console.error('Redis Publisher Error', err));
-
-redisSubscriber.on('connect', () => console.log('Redis Subscriber connected'));
-redisSubscriber.on('error', (err: any) => console.error('Redis Subscriber Error', err));
-
-export const redisPlugin = new Elysia()
-  .decorate('redisPublisher', redisPublisher)
-  .decorate('redisSubscriber', redisSubscriber);
+export const redisPlugin = new Elysia().decorate('redis', redis);
 
 export type RedisPlugin = typeof redisPlugin;
